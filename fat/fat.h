@@ -182,4 +182,4 @@ static inline uint32_t fat_firstSectorOfCluster(const fat_BootSector* boot, unsi
 static inline uint32_t fat_totalClusters(const fat_BootSector* boot);
 static inline uint32_t fat_countOfClusters(const fat_BootSector* boot);
 static inline FatType fat_getType(const fat_BootSector* boot);
-static inline uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch);
+//static inline uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch);
