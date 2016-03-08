@@ -10,7 +10,7 @@ static void fat_UCS2ToUTF8(char* filename, const fat_LongFileName* lfn)
 	memcpy(filename + 0x0B, lfn->ucs2_3, 0x04);
 }
 
-inline uint32_t fat_sectorsPerFat(const fat_BootSector * boot)
+uint32_t fat_sectorsPerFat(const fat_BootSector * boot)
 {
 	assert(boot != NULL);
 
@@ -19,14 +19,14 @@ inline uint32_t fat_sectorsPerFat(const fat_BootSector * boot)
 		: ((fat32_BootSector*)boot->rest)->sectorsPerFAT32;
 }
 
-inline uint32_t fat_rootDirSectors(const fat_BootSector * boot)
+uint32_t fat_rootDirSectors(const fat_BootSector * boot)
 {
 	assert(boot != NULL);
 
 	return (boot->rootEntries * 32 + boot->bytesPerSector - 1) / boot->bytesPerSector;
 }
 
-inline uint32_t fat_firstDataSector(const fat_BootSector * boot)
+uint32_t fat_firstDataSector(const fat_BootSector * boot)
 {
 	assert(boot != NULL);
 
@@ -36,7 +36,7 @@ inline uint32_t fat_firstDataSector(const fat_BootSector * boot)
 	return boot->reservedSectors + (boot->numberOfFATs * sectorsPerFat) + rootDirSectors;
 }
 
-inline uint32_t fat_firstSectorOfCluster(const fat_BootSector * boot, unsigned cluster)
+uint32_t fat_firstSectorOfCluster(const fat_BootSector * boot, unsigned cluster)
 {
 	assert(boot != NULL);
 
@@ -45,7 +45,7 @@ inline uint32_t fat_firstSectorOfCluster(const fat_BootSector * boot, unsigned c
 	return ((cluster - 2) * boot->sectorsPerCluster) + firstDataSector;
 }
 
-inline uint32_t fat_totalClusters(const fat_BootSector * boot)
+uint32_t fat_totalClusters(const fat_BootSector * boot)
 {
 	assert(boot != NULL);
 
@@ -54,7 +54,7 @@ inline uint32_t fat_totalClusters(const fat_BootSector * boot)
 		: boot->totalSectors32;
 }
 
-inline uint32_t fat_countOfClusters(const fat_BootSector * boot)
+uint32_t fat_countOfClusters(const fat_BootSector * boot)
 {
 	assert(boot != NULL);
 
@@ -66,21 +66,21 @@ inline uint32_t fat_countOfClusters(const fat_BootSector * boot)
 	return dataSectors / boot->sectorsPerCluster;
 }
 
-inline FatType fat_getType(const fat_BootSector * boot)
+FatType fat_getType(const fat_BootSector * boot)
 {
 	uint32_t countOfClusters = fat_countOfClusters(boot);
-	
+
 	return (countOfClusters < 4085)
 		? FAT12
 		: (countOfClusters < 65525)
-			? FAT16
-			: FAT32;
+		? FAT16
+		: FAT32;
 }
 
-inline uint32_t fat_nextSector(fetchData_t fetchData, fat_BootSector* boot)
+uint32_t fat_nextSector(fetchData_t fetchData, fat_BootSector* boot)
 {
-	fat_PartitionEntry entries[0x04];																	// max 4 partitions in mbr
-	fetchData(offsetof(fat_MBR, partitionTable), sizeof(fat_PartitionEntry) * 4, (char**)&entries);		// reads all the partitions
+	fat_PartitionEntry entries[0x04] = { 0 };														// max 4 partitions in mbr
+	fetchData(offsetof(fat_MBR, partitionTable), sizeof(fat_PartitionEntry) * 4, (char*)&entries);	// reads all the partitions
 
 	static unsigned i = 0;
 	uint32_t partitionOffset = 0;
@@ -90,15 +90,18 @@ inline uint32_t fat_nextSector(fetchData_t fetchData, fat_BootSector* boot)
 			continue;
 
 		partitionOffset = entries[i].startSector * 512;
+		break;
 	}
 
 	if (partitionOffset > 0)
-		fetchData(partitionOffset, sizeof(fat_BootSector), (char**)&boot);
+		fetchData(partitionOffset, sizeof(fat_BootSector), (char*)boot);
+	else if (i == 3)		// reset it
+		i = 0;
 
 	return partitionOffset;
 }
 
-//inline uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch)
+//uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch)
 //{
 //	assert(boot != NULL);
 //	assert(fetch != NULL);
