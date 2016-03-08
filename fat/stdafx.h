@@ -9,7 +9,10 @@
 
 #include <stdio.h>
 #include <tchar.h>
+#include <inttypes.h>
+#include <iostream>
+#include <fstream>
 
-
+#include "fat.h"
 
 // TODO: reference additional headers your program requires here

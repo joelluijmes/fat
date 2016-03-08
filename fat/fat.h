@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #ifdef _MSC_VER
 #define PACK( __declaration__ ) __pragma( pack(push, 1) ) __declaration__ __pragma( pack(pop) )
@@ -70,13 +71,13 @@ struct fat_BootSector
 	uint16_t numberOfHeads;
 	uint32_t hiddenSectors;
 	uint32_t totalSectors32;
+	uint8_t rest[476];
 });
 
 typedef struct fat16_BootSector fat16_BootSector;
 PACK(
 struct fat16_BootSector
 {
-	fat_BootSector bootSector;
 	uint8_t driveNumber;
 	uint8_t reserved;
 	uint8_t bootSignature;
@@ -91,7 +92,6 @@ typedef struct fat32_BootSector fat32_BootSector;
 PACK(
 struct fat32_BootSector
 {
-	fat_BootSector bootSector;
 	uint32_t sectorsPerFAT32;
 	uint16_t flags;
 	uint16_t version;
@@ -105,7 +105,7 @@ struct fat32_BootSector
 	uint32_t volumeId;
 	uint8_t volumeLabel[0x0B];
 	uint8_t fatName[0x08];
-	uint8_t bootCode[420];
+	uint8_t bootCode[422];
 });
 
 typedef struct fat_FileSystemInformationSector fat_FileSystemInformationSector;
@@ -146,13 +146,13 @@ PACK(
 struct fat_LongFileName
 {
 	uint8_t ordinal;
-	uint16_t unicode1[0x05];
+	uint16_t ucs2_1[0x05];
 	uint8_t attribute;
 	uint8_t type;
 	uint8_t checksum;
-	uint16_t unicode2[0x06];
+	uint16_t ucs2_2[0x06];
 	uint16_t cluster;
-	uint16_t unicode3[0x02];
+	uint16_t ucs2_3[0x02];
 });
 
 typedef struct fat_FileSystem fat_FileSystem;
@@ -164,4 +164,22 @@ struct fat_FileSystem
 	uint8_t sectorsPerCluster;
 };
 
-static void fat_UCS2ToUTF8(uint8_t* filename, const fat_LongFileName* lfn);
+typedef enum FatType FatType;
+enum FatType
+{
+	FAT12,
+	FAT16,
+	FAT32
+};
+
+typedef uint8_t(*fetchData_t)(unsigned address, unsigned count, char** buf);
+
+static void fat_UCS2ToUTF8(char* filename, const fat_LongFileName* lfn);
+static inline uint32_t fat_sectorsPerFat(const fat_BootSector* boot);
+static inline uint32_t fat_rootDirSectors(const fat_BootSector* boot);
+static inline uint32_t fat_firstDataSector(const fat_BootSector* boot);
+static inline uint32_t fat_firstSectorOfCluster(const fat_BootSector* boot, unsigned cluster);
+static inline uint32_t fat_totalClusters(const fat_BootSector* boot);
+static inline uint32_t fat_countOfClusters(const fat_BootSector* boot);
+static inline FatType fat_getType(const fat_BootSector* boot);
+static inline uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch);
