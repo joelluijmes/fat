@@ -181,7 +181,7 @@ uint32_t fat_totalFatSize(const fat_BootSector* boot);
 uint32_t fat_sectorToAddress(const fat_BootSector* boot, unsigned partitionOffset, uint32_t sector);
 
 // Gets the amount of sectors used by root directory
-uint32_t fat_rootDirSectors(const fat_BootSector* boot);
+uint32_t fat_numberOfRootDirSectors(const fat_BootSector* boot);
 
 // Finds the first data sector
 uint32_t fat_firstDataSector(const fat_BootSector* boot);
@@ -201,8 +201,10 @@ FatType fat_getType(const fat_BootSector* boot);
 // Follows the cluster chain, check eoc if End Of Cluster has been reached
 uint32_t fat_nextClusterEntry(const fat_BootSector* boot, unsigned partitionOffset, unsigned cluster, fetchData_t fetch, uint8_t* eoc);
 
-// Fetches the next partition, returns the partition offset
-uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot);
+void fat_nextDirectoryEntry(const fat_BootSector* boot, unsigned cluster);
+
+// Fetches the next partition, returns the partition offset, use eop to check if end of partitions is reached
+uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, uint8_t* eop);
 
 // Compares input with the directory entry (short file name)
 uint8_t fat_compareFilename(const fat_DirectoryEntry* entry, const char* input);
