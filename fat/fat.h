@@ -21,6 +21,7 @@
 #define FAT_TYPE_32BIT_LBA 0x0C
 #define FAT_TYPE_16BIT_LBA 0x0E
 #define FAT_TYPE_MSDOS_LBA 0x0F
+#define FAT_SUPPORTED_TYPES (FAT_TYPE_12BIT|FAT_TYPE_16BIT|FAT_TYPE_32BIT|FAT_TYPE_32BIT_LBA|FAT_TYPE_16BIT_LBA)
 
 #define FAT_FILE_ATTR_READONLY 0x01
 #define FAT_FILE_ATTR_HIDDEN 0x02
@@ -172,14 +173,15 @@ enum FatType
 	FAT32
 };
 
-typedef uint8_t(*fetchData_t)(unsigned address, unsigned count, char** buf);
+typedef uint8_t(*fetchData_t)(unsigned address, unsigned count, char** out);
 
-static void fat_UCS2ToUTF8(char* filename, const fat_LongFileName* lfn);
-static inline uint32_t fat_sectorsPerFat(const fat_BootSector* boot);
-static inline uint32_t fat_rootDirSectors(const fat_BootSector* boot);
-static inline uint32_t fat_firstDataSector(const fat_BootSector* boot);
-static inline uint32_t fat_firstSectorOfCluster(const fat_BootSector* boot, unsigned cluster);
-static inline uint32_t fat_totalClusters(const fat_BootSector* boot);
-static inline uint32_t fat_countOfClusters(const fat_BootSector* boot);
-static inline FatType fat_getType(const fat_BootSector* boot);
-//static inline uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch);
+void fat_UCS2ToUTF8(char* filename, const fat_LongFileName* lfn);
+inline uint32_t fat_sectorsPerFat(const fat_BootSector* boot);
+inline uint32_t fat_rootDirSectors(const fat_BootSector* boot);
+inline uint32_t fat_firstDataSector(const fat_BootSector* boot);
+inline uint32_t fat_firstSectorOfCluster(const fat_BootSector* boot, unsigned cluster);
+inline uint32_t fat_totalClusters(const fat_BootSector* boot);
+inline uint32_t fat_countOfClusters(const fat_BootSector* boot);
+inline FatType fat_getType(const fat_BootSector* boot);
+//inline uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch);
+inline uint32_t fat_nextSector(fetchData_t fetchData, fat_BootSector* boot);

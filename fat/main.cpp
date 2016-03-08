@@ -1,32 +1,26 @@
-#include "stdafx.h"
+#include <fstream>
+#include <iostream>
+
+#include "fat.h"
 
 const char* path = "C:\\Users\\joell\\Dropbox\\Documenten\\fat.bin";
 
 using namespace std;
 
+fstream file(path, ios_base::in | ios_base::binary);
+
+uint8_t fetch(unsigned address, unsigned count, char** out)
+{
+	file.seekg(address);
+	file.get(*out, count);
+
+	return 0;
+}
+
 int main(int argc, char* argv[])
 {
-	unsigned f32 = sizeof(fat32_BootSector);
-	unsigned f16 = sizeof(fat16_BootSector);
-
-	fstream file(path, ios_base::in | ios_base::binary);
-
-	fat_MBR mbr;
-	fat32_BootSector bootSector;
-
-	file.get((char*)&mbr, sizeof(fat_MBR));
-
-	for (unsigned i = 0; i < 4; ++i)
-	{
-		uint32_t offset = 512 * mbr.partitionTable[i].startSector;
-		file.seekg(offset);
-		file.get((char*)&bootSector, sizeof(fat32_BootSector));
-
-		//uint32_t rootDirSectors = FAT_ROOTDIR_SECTORS(&bootSector);
-
-		i = i;
-	}
-
+	fat_BootSector boot;
+	uint32_t offset = fat_nextSector(fetch, &boot);
 
 	return 0;
 }

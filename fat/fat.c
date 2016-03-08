@@ -77,6 +77,27 @@ inline FatType fat_getType(const fat_BootSector * boot)
 			: FAT32;
 }
 
+inline uint32_t fat_nextSector(fetchData_t fetchData, fat_BootSector* boot)
+{
+	fat_PartitionEntry entries[0x04];																	// max 4 partitions in mbr
+	fetchData(offsetof(fat_MBR, partitionTable), sizeof(fat_PartitionEntry) * 4, (char**)&entries);		// reads all the partitions
+
+	static unsigned i = 0;
+	uint32_t partitionOffset = 0;
+	for (; i < 4; ++i)
+	{
+		if ((entries[i].type | FAT_SUPPORTED_TYPES) == 0)
+			continue;
+
+		partitionOffset = entries[i].startSector * 512;
+	}
+
+	if (partitionOffset > 0)
+		fetchData(partitionOffset, sizeof(fat_BootSector), (char**)&boot);
+
+	return partitionOffset;
+}
+
 //inline uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch)
 //{
 //	assert(boot != NULL);
