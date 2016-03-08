@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
 #ifdef _MSC_VER
 #define PACK( __declaration__ ) __pragma( pack(push, 1) ) __declaration__ __pragma( pack(pop) )
@@ -173,6 +174,12 @@ void fat_UCS2ToUTF8(char* filename, const fat_LongFileName* lfn);
 // Calculate sectors per fat
 uint32_t fat_sectorsPerFat(const fat_BootSector* boot);
 
+// Calculate total size usage of the FATs
+uint32_t fat_totalFatSize(const fat_BootSector* boot);
+
+// Calculates the byte address from sector
+uint32_t fat_sectorToAddress(const fat_BootSector* boot, unsigned partitionOffset, uint32_t sector);
+
 // Gets the amount of sectors used by root directory
 uint32_t fat_rootDirSectors(const fat_BootSector* boot);
 
@@ -191,7 +198,12 @@ uint32_t fat_countOfClusters(const fat_BootSector* boot);
 // Checks what FAT type bootSector is (FAT12, FAT16, FAT32)
 FatType fat_getType(const fat_BootSector* boot);
 
-//uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch);
+// Follows the cluster chain, check eoc if End Of Cluster has been reached
+uint32_t fat_nextClusterEntry(const fat_BootSector* boot, unsigned partitionOffset, unsigned cluster, fetchData_t fetch, uint8_t* eoc);
 
 // Fetches the next partition, returns the partition offset
-uint32_t fat_nextSector(fetchData_t fetchData, fat_BootSector* boot);
+uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot);
+
+// Compares input with the directory entry (short file name)
+uint8_t fat_compareFilename(const fat_DirectoryEntry* entry, const char* input);
+
