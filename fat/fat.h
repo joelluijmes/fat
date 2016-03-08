@@ -156,15 +156,6 @@ struct fat_LongFileName
 	uint16_t ucs2_3[0x02];
 });
 
-typedef struct fat_FileSystem fat_FileSystem;
-struct fat_FileSystem
-{
-	FILE* f;
-	uint32_t bootSectorOffset;
-	uint32_t firstDataCluster;
-	uint8_t sectorsPerCluster;
-};
-
 typedef enum FatType FatType;
 enum FatType
 {
@@ -173,15 +164,34 @@ enum FatType
 	FAT32
 };
 
+// Fetches data from the device (i.e. file or hardware driver)
 typedef uint8_t(*fetchData_t)(unsigned address, unsigned count, char* out);
 
+// Converts UCS2 (LongFileName) to UTF8 (char*)
 void fat_UCS2ToUTF8(char* filename, const fat_LongFileName* lfn);
+
+// Calculate sectors per fat
 uint32_t fat_sectorsPerFat(const fat_BootSector* boot);
+
+// Gets the amount of sectors used by root directory
 uint32_t fat_rootDirSectors(const fat_BootSector* boot);
+
+// Finds the first data sector
 uint32_t fat_firstDataSector(const fat_BootSector* boot);
+
+// Finds the first sector of cluster N
 uint32_t fat_firstSectorOfCluster(const fat_BootSector* boot, unsigned cluster);
-uint32_t fat_totalClusters(const fat_BootSector* boot);
+
+// Calculates the amount of sectors
+uint32_t fat_countOfSectors(const fat_BootSector* boot);
+
+// Calculates the amount of clusters
 uint32_t fat_countOfClusters(const fat_BootSector* boot);
+
+// Checks what FAT type bootSector is (FAT12, FAT16, FAT32)
 FatType fat_getType(const fat_BootSector* boot);
+
 //uint32_t fat_clusterInFatEntry(const fat_BootSector* boot, unsigned cluster, fetchData_t fetch);
+
+// Fetches the next partition, returns the partition offset
 uint32_t fat_nextSector(fetchData_t fetchData, fat_BootSector* boot);
