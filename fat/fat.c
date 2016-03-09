@@ -28,21 +28,21 @@ static EntryState _state;
 void fat_getFileName(char* fileName, const fat_DirectoryEntry* entry)
 {
     uint8_t x = 0;
-    for (uint8_t i = 0; i < 8; ++i, ++x)
+    for (uint8_t i = 0; i < 8; ++i)
     {	              
         if (entry->fileName[i] == ' ')						
             break;
 
-        fileName[x] = entry->fileName[i];
+        fileName[x++] = tolower(entry->fileName[i]);
     }
 
-    fileName[++x] = '.';
-    for (uint8_t i = 0; i < 3; ++i, ++x)
+    fileName[x++] = '.';
+    for (uint8_t i = 0; i < 3; ++i)
     {
         if (entry->extension[i] == ' ')
             break;
 
-        fileName[x] = entry->extension[i];
+        fileName[x++] = tolower(entry->extension[i]);
     }
 }
 

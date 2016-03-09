@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-const char* path = "C:\\Users\\joell\\Dropbox\\Documenten\\fat.bin";
+const char* path = "C:\\Users\\joell\\Dropbox\\Documenten\\sd.bin";
 
 using namespace std;
 
