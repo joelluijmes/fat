@@ -13,10 +13,15 @@ struct EntryState
     unsigned currentCluster;
     unsigned startCluster;
     unsigned currentSector;
-    uint8_t endOfTable;
-    uint8_t lfnDirectoryEntry;
-    uint8_t endOfChain;
     FatType fatType;
+
+    enum 
+    {
+        EndOfTable = 1 << 0,
+        LfnDirectoryEntry = 1 << 1,
+        EndOfChain = 1 << 2
+    } Status;
+    enum Status flags;    
 };
 static EntryState _state;
 
@@ -157,7 +162,7 @@ uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, ui
     assert(boot != NULL);
 
     fat_MBR mbr;
-    fetchData(0, sizeof(mbr), &mbr);
+    fetchData(0, sizeof(mbr), (char*)&mbr);
 
     static unsigned i = 0;                                                  // partition indexer (note static)
     uint32_t partitionOffset = 0;
@@ -254,6 +259,8 @@ uint8_t fat_firstDirectoryEntry(const fat_BootSector * boot, unsigned startClust
 
 uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen)
 {
+    _state.flags |= EndOfChain;
+
     if (_state.startCluster != startCluster || _state.startCluster == -1)                        // different start cluster -> restart
     {
         memset(&_state, 0, sizeof(EntryState));
@@ -263,8 +270,8 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluste
     }
     else                                                            // check if we have valid state
     {
-        if (_state.endOfTable)                                      // end has been reached
-            return 1;
+        if (_state.flags | EndOfTable)                                      // end has been reached
+            return 0;
     }
 
     // TODO: Can't we use entry??
@@ -279,10 +286,16 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluste
         unsigned clusterEntryIndex = _state.entryIndex % fat_entriesPerCluster(boot);
         if (_state.entryIndex > 0 && clusterEntryIndex == 0)       // next cluster
         {
-            if (_state.endOfChain)
-                return 1;
+            if (_state.flags | EndOfChain)
+            {
+                _state.flags |= EndOfTable;
+                return 0;
+            }
 
-            _state.currentCluster = fat_nextClusterEntry(boot, partitionOffset, _state.currentCluster, fetch, &_state.endOfChain);
+            uint8_t eoc;
+            _state.currentCluster = fat_nextClusterEntry(boot, partitionOffset, _state.currentCluster, fetch, &eoc);
+            if (eoc)
+                _state.flags |= EndOfChain;
         }
 
         uint32_t address =                                          // calculates the address of where the entry is located
@@ -291,21 +304,21 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluste
             sizeof(fat_DirectoryEntry) * clusterEntryIndex;                                     // entry offset
         
         fetch(address, sizeof(fat_DirectoryEntry), entryBuf);       // reads the data
-        if (_state.lfnDirectoryEntry)                               // after the long file name
+        if (_state.flags | LfnDirectoryEntry)                       // after the long file name
         {   
             ++_state.entryIndex;
             memcpy(entry, entryBuf, sizeof(fat_DirectoryEntry));
             if (fileName != NULL)
                 strncpy(fileName, nameBuf, nameLen);
 
-            _state.lfnDirectoryEntry = 0;
-            return 0;
+            _state.flags &= ~LfnDirectoryEntry;
+            return 1;
         }
 
         if (dir->fileName[0] == 0)                                  // last entry
         {
-            _state.endOfTable = 1;
-            return 1;
+            _state.flags |= EndOfTable;
+            return 0;
         }
         else if (dir->fileName[0] == 0xE5)                          // deleted entry
             continue;                                               // goto the next
@@ -319,7 +332,7 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluste
             if (fileName != NULL)
                 strncpy(fileName, nameBuf, nameLen);
 
-            return 0;
+            return 1;
         }
 
         uint8_t blockIndex = (lfn->ordinal & 0x0F) - 1;             // calculates which blocks 
@@ -328,8 +341,12 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluste
             nameBuf[(blockIndex + 1) * 13] = 0;                     // string termination
 
         UCS2ToUTF8(nameBuf + blockIndex * 13, lfn);                 // extracts the filename block and convert it to UTF8 (char)
-        _state.lfnDirectoryEntry = blockIndex == 0;                 // after the first block is the usual DirectoryEntry which contains location and file date etc.
+        if (blockIndex == 0)                                        // after the first block is the usual DirectoryEntry which contains location and file date etc.
+            _state.flags |= LfnDirectoryEntry;
     }
+
+    _state.flags |= EndOfTable;
+    return 0;
 }
 
 uint8_t fat_compareFilename(const fat_DirectoryEntry* entry, const char* input)

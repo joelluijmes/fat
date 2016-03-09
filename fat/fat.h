@@ -205,6 +205,10 @@ FatType fat_getType(const fat_BootSector* boot);
 // Follows the cluster chain, check eoc if End Of Cluster has been reached
 uint32_t fat_nextClusterEntry(const fat_BootSector* boot, unsigned partitionOffset, unsigned cluster, fetchData_t fetch, uint8_t* eoc);
 
+// Returns the first directory entry in a cluster
+uint8_t fat_firstDirectoryEntry(const fat_BootSector * boot, unsigned startCluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen);
+
+// Returns the next directory entry (cluster chaining is built in)
 uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned cluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen);
 
 // Fetches the next partition, returns the partition offset, use eop to check if end of partitions is reached
