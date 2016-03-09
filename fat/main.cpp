@@ -18,8 +18,8 @@ int main(int argc, char* argv[])
 {
 	fat_BootSector boot;
     unsigned i = sizeof(fat_BootSector);
-    //uint32_t offset = fat_nextPartitionSector(fetch, &boot, nullptr);
-	fetch(0, sizeof(boot), (char*)&boot);
+    uint32_t offset = 0;// fat_nextPartitionSector(fetch, &boot, nullptr);
+	fetch(offset, sizeof(boot), (char*)&boot);
 	FatType type = fat_getType(&boot);
 
     uint32_t first = fat_firstDataSector(&boot);
@@ -29,27 +29,12 @@ int main(int argc, char* argv[])
     uint32_t firstRoot = boot.reservedSectors + (boot.numberOfFATs * boot.sectorsPerFAT16);
 
     fat_DirectoryEntry entry = { 0 };
-    fat_nextDirectoryEntry(&boot, 2, 0, fetch, &entry);
+    char buf[255];
 
-    char* buf = new char[boot.bytesPerSector];
-    fat_nextClusterEntry(&boot, 0, 2, fetch, nullptr);
-    uint32_t address = firstSectorOfCluster * boot.bytesPerSector + 0;
-    fetch(address, boot.bytesPerSector, buf);
+    while (fat_nextDirectoryEntry(&boot, 2, offset, fetch, &entry, buf, 255) == 0)
+    {
+        cout << buf << endl;
+    }
 
-    
-
-	cout << "Cluster Chain: ";
-
-	uint8_t eoc = 0;
-	uint32_t next = 2;
-	while (!eoc)
-	{
-		cout << next << ", ";
-
-		next = fat_nextClusterEntry(&boot, 0, next, fetch, &eoc);
-	}
-
-	cout << endl;
-    delete[] buf;
 	return 0;
 }

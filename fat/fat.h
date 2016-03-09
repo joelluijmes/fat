@@ -168,8 +168,8 @@ enum FatType
 // Fetches data from the device (i.e. file or hardware driver)
 typedef uint8_t(*fetchData_t)(unsigned address, unsigned count, char* out);
 
-// Converts UCS2 (LongFileName) to UTF8 (char*)
-void fat_UCS2ToUTF8(char* filename, const fat_LongFileName* lfn);
+// Gets filename out of a short directory entry, fileName length must be >= 12 
+void fat_getFileName(char* fileName, const fat_DirectoryEntry* entry);
 
 // Calculate sectors per fat
 uint32_t fat_sectorsPerFat(const fat_BootSector* boot);
@@ -195,13 +195,17 @@ uint32_t fat_countOfSectors(const fat_BootSector* boot);
 // Calculates the amount of clusters
 uint32_t fat_countOfClusters(const fat_BootSector* boot);
 
+uint32_t fat_clusterSize(const fat_BootSector* boot);
+
+uint8_t fat_entriesPerCluster(const fat_BootSector* boot);
+
 // Checks what FAT type bootSector is (FAT12, FAT16, FAT32)
 FatType fat_getType(const fat_BootSector* boot);
 
 // Follows the cluster chain, check eoc if End Of Cluster has been reached
 uint32_t fat_nextClusterEntry(const fat_BootSector* boot, unsigned partitionOffset, unsigned cluster, fetchData_t fetch, uint8_t* eoc);
 
-uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned cluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry);
+uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned cluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen);
 
 // Fetches the next partition, returns the partition offset, use eop to check if end of partitions is reached
 uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, uint8_t* eop);

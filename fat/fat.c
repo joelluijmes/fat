@@ -1,20 +1,60 @@
 #include "fat.h"
 
-// All formules without (extensivily) comments is based on Microsofts Specification
-// Please read the full document to understand those things
-// (Commented functions are made from scratch;)
+// Some formules are based on Microsofts Specification. Please read the full document to understand that math.
+// Other small functions are just helper functions, code with extensive comments is the real magic
 //
 // Microsoft Extensible Firmware Initiative FAT32 File System Specification 
 // http://download.microsoft.com/download/1/6/1/161ba512-40e2-4cc9-843a-923143f3456c/fatgen103.doc
 
-static void fat_UCS2ToUTF8(char* filename, const fat_LongFileName* lfn)
+typedef struct EntryState EntryState;
+struct EntryState
+{
+    unsigned entryIndex;
+    unsigned currentCluster;
+    unsigned startCluster;
+    unsigned currentSector;
+    uint8_t endOfTable;
+    uint8_t lfnDirectoryEntry;
+    uint8_t endOfChain;
+    FatType fatType;
+};
+static EntryState _state;
+
+void fat_getFileName(char* fileName, const fat_DirectoryEntry* entry)
+{
+    uint8_t x = 0;
+    for (uint8_t i = 0; i < 8; ++i, ++x)
+    {	              
+        if (entry->fileName[i] == ' ')						
+            break;
+
+        fileName[x] = entry->fileName[i];
+    }
+
+    fileName[++x] = '.';
+    for (uint8_t i = 0; i < 3; ++i, ++x)
+    {
+        if (entry->extension[i] == ' ')
+            break;
+
+        fileName[x] = entry->extension[i];
+    }
+}
+
+static void UCS2ToUTF8(char* filename, const fat_LongFileName* lfn)
 {
     assert(filename != NULL);
     assert(lfn != NULL);
 
-    memcpy(filename, lfn->ucs2_1, 0x0A);
-    memcpy(filename + 0x05, lfn->ucs2_2, 0x0C);
-    memcpy(filename + 0x0B, lfn->ucs2_3, 0x04);
+    char* p = filename;
+    for (uint8_t i = 0; i < 0x05; ++i)
+        *p++ = *((char*)lfn->ucs2_1 + i * 2);
+
+    for (uint8_t i = 0; i < 0x06; ++i)
+        *p++ = *((char*)lfn->ucs2_2 + i * 2);
+
+    for (uint8_t i = 0; i < 0x02; ++i)
+        *p++ = *((char*)lfn->ucs2_3 + i * 2);
 }
 
 uint32_t fat_sectorsPerFat(const fat_BootSector * boot)
@@ -84,6 +124,18 @@ uint32_t fat_countOfClusters(const fat_BootSector * boot)
     uint32_t dataSectors = totalSectors - (boot->reservedSectors + (boot->numberOfFATs * sectorsPerFat) + rootDirSectors);
 
     return dataSectors / boot->sectorsPerCluster;
+}
+
+uint32_t fat_clusterSize(const fat_BootSector * boot)
+{
+    return boot->bytesPerSector * boot->sectorsPerCluster;
+}
+
+uint8_t fat_entriesPerCluster(const fat_BootSector * boot)
+{
+    uint32_t clusterSize = fat_clusterSize(boot);
+
+    return clusterSize / sizeof(fat_DirectoryEntry);
 }
 
 FatType fat_getType(const fat_BootSector * boot)
@@ -194,52 +246,89 @@ uint32_t fat_nextClusterEntry(const fat_BootSector* boot, unsigned partitionOffs
     return clusterEntry;
 }
 
-uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned cluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry)
+uint8_t fat_firstDirectoryEntry(const fat_BootSector * boot, unsigned startCluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen)
 {
+    _state.startCluster = -1;                                       // resets nextDirectoryEntry
+    return fat_nextDirectoryEntry(boot, startCluster, partitionOffset, fetch, entry, fileName, nameLen);
+}
+
+uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen)
+{
+    if (_state.startCluster != startCluster || _state.startCluster == -1)                        // different start cluster -> restart
+    {
+        memset(&_state, 0, sizeof(EntryState));
+        _state.startCluster = startCluster;
+        _state.currentCluster = startCluster;
+        _state.fatType = fat_getType(boot);
+    }
+    else                                                            // check if we have valid state
+    {
+        if (_state.endOfTable)                                      // end has been reached
+            return 1;
+    }
+
     // TODO: Can't we use entry??
     char entryBuf[sizeof(fat_DirectoryEntry)];  
-    char longNameBuffer[0xFF] = { 0 };                                  // buffer for the long file name
+    char nameBuf[0xFF] = { 0 };                              // buffer for the long file name
 
     fat_LongFileName* lfn = (fat_LongFileName*)&entryBuf;
     fat_DirectoryEntry* dir = (fat_DirectoryEntry*)&entryBuf;
-
-    static uint8_t endOfCluster = 0, entryIndex = 0;
-    if (endOfCluster)
-    {
-
-    }
-
-    for (; entryIndex < 32; ++entryIndex)
-    {
-        uint32_t address = fat_firstSectorOfCluster(boot, cluster) * boot->bytesPerSector + partitionOffset;    // base offset
-        address += sizeof(fat_DirectoryEntry) * entryIndex;                                                     // account for the current index
-
-        fetch(address, sizeof(fat_DirectoryEntry), entryBuf);               // reads the data
-        if (dir->fileName[0] == 0)                                          // last entry
-            return 1;
-        else if (dir->fileName[0] == 0xE5)                                  // deleted entry
-            return 2;
-
-        if (dir->fileAttributes != FAT_FILE_ATTR_LONG_NAME)                 // just a short file name (8.3 notation)
+    
+    for (; (_state.fatType != FAT32 && _state.entryIndex < boot->rootEntries); ++_state.entryIndex)
+    {   
+        unsigned clusterEntryIndex = _state.entryIndex % fat_entriesPerCluster(boot);
+        if (_state.entryIndex > 0 && clusterEntryIndex == 0)       // next cluster
         {
-            ++entryIndex;
+            if (_state.endOfChain)
+                return 1;
+
+            _state.currentCluster = fat_nextClusterEntry(boot, partitionOffset, _state.currentCluster, fetch, &_state.endOfChain);
+        }
+
+        uint32_t address =                                          // calculates the address of where the entry is located
+            partitionOffset +                                                                   // base offset
+            fat_firstSectorOfCluster(boot, _state.currentCluster) * boot->bytesPerSector +      // cluster offset
+            sizeof(fat_DirectoryEntry) * clusterEntryIndex;                                     // entry offset
+        
+        fetch(address, sizeof(fat_DirectoryEntry), entryBuf);       // reads the data
+        if (_state.lfnDirectoryEntry)                               // after the long file name
+        {   
+            ++_state.entryIndex;
             memcpy(entry, entryBuf, sizeof(fat_DirectoryEntry));
+            if (fileName != NULL)
+                strncpy(fileName, nameBuf, nameLen);
+
+            _state.lfnDirectoryEntry = 0;
             return 0;
         }
 
-        uint8_t blockIndex = (lfn->ordinal & 0x0F) - 1;                     // calculates which blocks 
-                                                                            // (every lfn is 13 bytes of the file name -> the block)
-        if (lfn->ordinal & 0x40)                                            // last block
-            longNameBuffer[(blockIndex + 1) * 13] = 0;                      // string termination
+        if (dir->fileName[0] == 0)                                  // last entry
+        {
+            _state.endOfTable = 1;
+            return 1;
+        }
+        else if (dir->fileName[0] == 0xE5)                          // deleted entry
+            continue;                                               // goto the next
 
-        fat_UCS2ToUTF8(longNameBuffer + blockIndex * 13, lfn);              // extracts the filename block and convert it to UTF8 (char)
-        if (blockIndex > 0)                                                 // not the first block
-            continue;
-            
-        // after the first block is the usual DirectoryEntry which contains location and file date etc.
-        fetch(address + sizeof(fat_DirectoryEntry), sizeof(fat_DirectoryEntry), entryBuf);
-        memcpy(entry, entryBuf, sizeof(fat_DirectoryEntry));
-        return 0;
+        if (dir->fileAttributes != FAT_FILE_ATTR_LONG_NAME)         // just a short file name (8.3 notation)
+        {
+            ++_state.entryIndex;
+            memcpy(entry, entryBuf, sizeof(fat_DirectoryEntry));
+
+            fat_getFileName(nameBuf, dir);
+            if (fileName != NULL)
+                strncpy(fileName, nameBuf, nameLen);
+
+            return 0;
+        }
+
+        uint8_t blockIndex = (lfn->ordinal & 0x0F) - 1;             // calculates which blocks 
+                                                                    // (every lfn is 13 bytes of the file name -> the block)
+        if (lfn->ordinal & 0x40)                                    // last block
+            nameBuf[(blockIndex + 1) * 13] = 0;                     // string termination
+
+        UCS2ToUTF8(nameBuf + blockIndex * 13, lfn);                 // extracts the filename block and convert it to UTF8 (char)
+        _state.lfnDirectoryEntry = blockIndex == 0;                 // after the first block is the usual DirectoryEntry which contains location and file date etc.
     }
 }
 
