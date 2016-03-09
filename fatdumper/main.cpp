@@ -3,7 +3,6 @@
 using namespace std;
 
 fstream file;
-
 fat_BootSector boot;
 fat_MBR mbr;
 
@@ -44,10 +43,12 @@ void dumpRootDir()
 
     while (fat_nextDirectoryEntry(&boot, offset, 2, fetch, &entry, buf, 255))
     {
+        uint32_t cluster = entry.clusterHigh << 16 | entry.clusterLow;
+
         if (entry.fileAttributes & FAT_FILE_ATTR_DIRECTORY)
-            printf("  [DIR] [%.8s    ] (%.2d:%.2d) %s\n", entry.fileName, entry.clusterLow, entry.fileSize, buf);
+            printf("  [DIR] [%.8s    ] (%.2d:%.2d) %s\n", entry.fileName, cluster, entry.fileSize, buf);
         else
-            printf("  [FIL] [%.8s.%.3s] (%.2d:%.2d) %s\n", entry.fileName, entry.extension, entry.clusterLow, entry.fileSize, buf);
+            printf("  [FIL] [%.8s.%.3s] (%.2d:%.2d) %s\n", entry.fileName, entry.extension, cluster, entry.fileSize, buf);
     }
 }
 
@@ -55,7 +56,7 @@ int main(int argc, char* argv[])
 {
     if (argc < 3)
     {
-        cout << "Usage: " << "fatdumper [filename] [mbr]" << endl;
+        cout << "Usage: " << "fatdumper [image] [mbr]" << endl;
         return -1;
     }
 
