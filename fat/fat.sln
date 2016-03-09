@@ -5,6 +5,11 @@ VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fat", "fat.vcxproj", "{200B6802-D3F2-422A-B73D-EE938D3DCA54}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fatdumper", "..\fatdumper\fatdumper.vcxproj", "{57470553-919F-46D6-AD10-EFF19B9A9464}"
+	ProjectSection(ProjectDependencies) = postProject
+		{200B6802-D3F2-422A-B73D-EE938D3DCA54} = {200B6802-D3F2-422A-B73D-EE938D3DCA54}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +26,14 @@ Global
 		{200B6802-D3F2-422A-B73D-EE938D3DCA54}.Release|x64.Build.0 = Release|x64
 		{200B6802-D3F2-422A-B73D-EE938D3DCA54}.Release|x86.ActiveCfg = Release|Win32
 		{200B6802-D3F2-422A-B73D-EE938D3DCA54}.Release|x86.Build.0 = Release|Win32
+		{57470553-919F-46D6-AD10-EFF19B9A9464}.Debug|x64.ActiveCfg = Debug|x64
+		{57470553-919F-46D6-AD10-EFF19B9A9464}.Debug|x64.Build.0 = Debug|x64
+		{57470553-919F-46D6-AD10-EFF19B9A9464}.Debug|x86.ActiveCfg = Debug|Win32
+		{57470553-919F-46D6-AD10-EFF19B9A9464}.Debug|x86.Build.0 = Debug|Win32
+		{57470553-919F-46D6-AD10-EFF19B9A9464}.Release|x64.ActiveCfg = Release|x64
+		{57470553-919F-46D6-AD10-EFF19B9A9464}.Release|x64.Build.0 = Release|x64
+		{57470553-919F-46D6-AD10-EFF19B9A9464}.Release|x86.ActiveCfg = Release|Win32
+		{57470553-919F-46D6-AD10-EFF19B9A9464}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
