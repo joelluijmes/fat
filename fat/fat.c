@@ -1,6 +1,9 @@
 #include "fat.h"
 
-// All formules in this source file are extracted from: 
+// All formules without (extensivily) comments is based on Microsofts Specification
+// Please read the full document to understand those things
+// (Commented functions are made from scratch;)
+//
 // Microsoft Extensible Firmware Initiative FAT32 File System Specification 
 // http://download.microsoft.com/download/1/6/1/161ba512-40e2-4cc9-843a-923143f3456c/fatgen103.doc
 
@@ -104,7 +107,7 @@ uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, ui
     fat_MBR mbr;
     fetchData(0, sizeof(mbr), &mbr);
 
-    static unsigned i = 0;
+    static unsigned i = 0;                                                  // partition indexer (note static)
     uint32_t partitionOffset = 0;
     for (; i < 4; ++i)														// max 4 boot partitions
     {
@@ -119,17 +122,13 @@ uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, ui
     }
 
     if (partitionOffset > 0)
-    {
         fetchData(partitionOffset, sizeof(fat_BootSector), (char*)boot);	// read the actual bootsector
-        
-        if (eop)
-            *eop = 0;
-    }
-    else if (i == 3)														// reset it
+    
+    if (i == 3)														        // reset the indexer
     {
         i = 0;
         if (eop)
-            *eop = 1;
+            *eop = 1;                                                       // let know we reached the end
     }
 
     return partitionOffset;													// return the start of partition
@@ -195,14 +194,53 @@ uint32_t fat_nextClusterEntry(const fat_BootSector* boot, unsigned partitionOffs
     return clusterEntry;
 }
 
-void fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned cluster)
+uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned cluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry)
 {
-    char entry[sizeof(fat_DirectoryEntry)];
+    // TODO: Can't we use entry??
+    char entryBuf[sizeof(fat_DirectoryEntry)];  
+    char longNameBuffer[0xFF] = { 0 };                                  // buffer for the long file name
 
-    fat_LongFileName* lfn = (fat_LongFileName*)&entry;
-    fat_DirectoryEntry* dir = (fat_DirectoryEntry*)&entry;
+    fat_LongFileName* lfn = (fat_LongFileName*)&entryBuf;
+    fat_DirectoryEntry* dir = (fat_DirectoryEntry*)&entryBuf;
 
+    static uint8_t endOfCluster = 0, entryIndex = 0;
+    if (endOfCluster)
+    {
 
+    }
+
+    for (; entryIndex < 32; ++entryIndex)
+    {
+        uint32_t address = fat_firstSectorOfCluster(boot, cluster) * boot->bytesPerSector + partitionOffset;    // base offset
+        address += sizeof(fat_DirectoryEntry) * entryIndex;                                                     // account for the current index
+
+        fetch(address, sizeof(fat_DirectoryEntry), entryBuf);               // reads the data
+        if (dir->fileName[0] == 0)                                          // last entry
+            return 1;
+        else if (dir->fileName[0] == 0xE5)                                  // deleted entry
+            return 2;
+
+        if (dir->fileAttributes != FAT_FILE_ATTR_LONG_NAME)                 // just a short file name (8.3 notation)
+        {
+            ++entryIndex;
+            memcpy(entry, entryBuf, sizeof(fat_DirectoryEntry));
+            return 0;
+        }
+
+        uint8_t blockIndex = (lfn->ordinal & 0x0F) - 1;                     // calculates which blocks 
+                                                                            // (every lfn is 13 bytes of the file name -> the block)
+        if (lfn->ordinal & 0x40)                                            // last block
+            longNameBuffer[(blockIndex + 1) * 13] = 0;                      // string termination
+
+        fat_UCS2ToUTF8(longNameBuffer + blockIndex * 13, lfn);              // extracts the filename block and convert it to UTF8 (char)
+        if (blockIndex > 0)                                                 // not the first block
+            continue;
+            
+        // after the first block is the usual DirectoryEntry which contains location and file date etc.
+        fetch(address + sizeof(fat_DirectoryEntry), sizeof(fat_DirectoryEntry), entryBuf);
+        memcpy(entry, entryBuf, sizeof(fat_DirectoryEntry));
+        return 0;
+    }
 }
 
 uint8_t fat_compareFilename(const fat_DirectoryEntry* entry, const char* input)
