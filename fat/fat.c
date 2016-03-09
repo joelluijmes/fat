@@ -33,7 +33,9 @@ void fat_getFileName(char* fileName, const fat_DirectoryEntry* entry)
         if (entry->fileName[i] == ' ')						
             break;
 
-        fileName[x++] = tolower(entry->fileName[i]);
+        fileName[x++] = (entry->fileName[i] == 0x05)
+            ? tolower(0xE5)
+            : tolower(entry->fileName[i]);
     }
 
     fileName[x++] = '.';
