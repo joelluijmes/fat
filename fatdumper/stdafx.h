@@ -11,7 +11,9 @@
 #include <stdio.h>
 #include <cinttypes>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
+#include <sstream>
 
 extern "C" {
 #include "fat.h"
