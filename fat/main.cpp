@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-const char* path = "C:\\Users\\joell\\Dropbox\\Documenten\\fat12.img";
+const char* path = "C:\\Users\\joell\\Dropbox\\Documenten\\fat.bin";
 
 using namespace std;
 
@@ -18,8 +18,8 @@ int main(int argc, char* argv[])
 {
 	fat_BootSector boot;
     unsigned i = sizeof(fat_BootSector);
-    uint32_t offset = 0;// fat_nextPartitionSector(fetch, &boot, nullptr);
-	fetch(offset, sizeof(boot), (char*)&boot);
+    uint32_t offset = fat_nextPartitionSector(fetch, &boot, nullptr);
+	//fetch(offset, sizeof(boot), (char*)&boot);
 	FatType type = fat_getType(&boot);
 
     uint32_t first = fat_firstDataSector(&boot);
@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
     fat_DirectoryEntry entry = { 0 };
     char buf[255];
 
-    while (fat_nextDirectoryEntry(&boot, 2, offset, fetch, &entry, buf, 255) == 0)
+    while (fat_nextDirectoryEntry(&boot, offset, 2, fetch, &entry, buf, 255))
     {
         cout << buf << endl;
     }

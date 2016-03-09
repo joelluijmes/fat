@@ -255,21 +255,19 @@ uint32_t fat_nextClusterEntry(const fat_BootSector* boot, unsigned partitionOffs
     return clusterEntry;
 }
 
-uint8_t fat_firstDirectoryEntry(const fat_BootSector * boot, unsigned startCluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen)
+uint8_t fat_firstDirectoryEntry(const fat_BootSector * boot, unsigned partitionOffset, unsigned startCluster, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen)
 {
     _state.startCluster = -1;                                       // resets nextDirectoryEntry
     return fat_nextDirectoryEntry(boot, startCluster, partitionOffset, fetch, entry, fileName, nameLen);
 }
 
-uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen)
+uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned partitionOffset, unsigned startCluster, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen)
 {
     assert(boot != NULL);
     assert(fetch != NULL);
     assert(entry != NULL);
 
-    _state.flags |= EndOfChain;
-
-    if (_state.startCluster != startCluster || _state.startCluster == -1)                        // different start cluster -> restart
+    if (_state.startCluster != startCluster || _state.startCluster == -1)       // different start cluster -> restart
     {
         memset(&_state, 0, sizeof(EntryState));
         _state.startCluster = startCluster;
@@ -278,23 +276,25 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluste
     }
     else                                                            // check if we have valid state
     {
-        if (_state.flags | EndOfTable)                                      // end has been reached
+        if (_state.flags & EndOfTable)                              // end has been reached
             return 0;
     }
 
     // TODO: Can't we use entry??
     char entryBuf[sizeof(fat_DirectoryEntry)];  
-    char nameBuf[0xFF] = { 0 };                              // buffer for the long file name
+    char nameBuf[0xFF] = { 0 };                                     // buffer for the long file name
 
     fat_LongFileName* lfn = (fat_LongFileName*)&entryBuf;
     fat_DirectoryEntry* dir = (fat_DirectoryEntry*)&entryBuf;
     
-    for (; (_state.fatType != FAT32 && _state.entryIndex < boot->rootEntries); ++_state.entryIndex)
+    for (;  (_state.fatType != FAT32 && _state.entryIndex < boot->rootEntries) ||   // for FAT12/FAT16 the root entries is a given
+            (_state.fatType == FAT32)                                               // FAT32 doesn't restrict this (could be as large as needed)
+        ; ++_state.entryIndex)                                                      // just follow the chain like any file :)
     {   
         unsigned clusterEntryIndex = _state.entryIndex % fat_entriesPerCluster(boot);
         if (_state.entryIndex > 0 && clusterEntryIndex == 0)       // next cluster
         {
-            if (_state.flags | EndOfChain)
+            if (_state.flags & EndOfChain)
             {
                 _state.flags |= EndOfTable;
                 return 0;
@@ -312,7 +312,7 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluste
             sizeof(fat_DirectoryEntry) * clusterEntryIndex;                                     // entry offset
         
         fetch(address, sizeof(fat_DirectoryEntry), entryBuf);       // reads the data
-        if (_state.flags | LfnDirectoryEntry)                       // after the long file name
+        if (_state.flags & LfnDirectoryEntry)                       // after the long file name
         {   
             ++_state.entryIndex;
             memcpy(entry, entryBuf, sizeof(fat_DirectoryEntry));
