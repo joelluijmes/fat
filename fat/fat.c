@@ -133,11 +133,15 @@ uint32_t fat_countOfClusters(const fat_BootSector * boot)
 
 uint32_t fat_clusterSize(const fat_BootSector * boot)
 {
+    assert(boot != NULL);
+
     return boot->bytesPerSector * boot->sectorsPerCluster;
 }
 
 uint8_t fat_entriesPerCluster(const fat_BootSector * boot)
 {
+    assert(boot != NULL);
+
     uint32_t clusterSize = fat_clusterSize(boot);
 
     return clusterSize / sizeof(fat_DirectoryEntry);
@@ -259,6 +263,10 @@ uint8_t fat_firstDirectoryEntry(const fat_BootSector * boot, unsigned startClust
 
 uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluster, unsigned partitionOffset, fetchData_t fetch, fat_DirectoryEntry* entry, char* fileName, unsigned nameLen)
 {
+    assert(boot != NULL);
+    assert(fetch != NULL);
+    assert(entry != NULL);
+
     _state.flags |= EndOfChain;
 
     if (_state.startCluster != startCluster || _state.startCluster == -1)                        // different start cluster -> restart
@@ -351,6 +359,9 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned startCluste
 
 uint8_t fat_compareFilename(const fat_DirectoryEntry* entry, const char* input)
 {
+    assert(entry != NULL);
+    assert(input != NULL);
+
     const char* p_input = input;
     const char* p_cmp = (char*)entry->fileName;
 
