@@ -71,6 +71,7 @@ uint32_t fat_sectorsPerFat(const fat_BootSector * boot)
 {
     assert(boot != NULL);
 
+    uint16_t i = offsetof(fat_BootSector, rest);
     return boot->sectorsPerFAT16 != 0
         ? boot->sectorsPerFAT16
         : ((fat32_BootSector*)boot->rest)->sectorsPerFAT32;						// finds sector in the fat32 part
@@ -179,14 +180,16 @@ uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, ui
     assert(boot != NULL);
 
     fat_MBR mbr;
-    fetchData(0, sizeof(mbr), (char*)&mbr);
+    if (!fetchData(0, sizeof(mbr), (char*)&mbr))
+        return -1;
 
     static unsigned i = 0;                                                  // partition indexer (note static)
     uint32_t partitionOffset = 0;
     for (; i < 4; ++i)														// max 4 boot partitions
     {
         fat_PartitionEntry entry;                                           // read partition entry
-        fetchData(offsetof(fat_MBR, partitionTable), sizeof(fat_PartitionEntry), (char*)&entry);	
+        if (!fetchData(offsetof(fat_MBR, partitionTable), sizeof(fat_PartitionEntry), (char*)&entry))
+            return;
 
         if ((entry.type | FAT_SUPPORTED_TYPES) == 0)						// check if it is supported
             continue;
@@ -196,7 +199,10 @@ uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, ui
     }
 
     if (partitionOffset > 0)
-        fetchData(partitionOffset, sizeof(fat_BootSector), (char*)boot);	// read the actual bootsector
+    {                                                                       // read the actual bootsector
+        if (!fetchData(partitionOffset, sizeof(fat_BootSector), (char*)boot))
+            return -1; 
+    }
     
     if (i == 3)														        // reset the indexer
     {
@@ -234,7 +240,8 @@ uint32_t fat_nextClusterEntry(const fat_BootSector* boot, unsigned partitionOffs
     assert(secBuf != NULL);
 
     uint32_t address = fat_sectorToAddress(boot, partitionOffset, thisFatSector);
-    fetch(address, boot->bytesPerSector, secBuf);
+    if (!fetch(address, boot->bytesPerSector, secBuf))
+        return -1;
 
     uint32_t clusterEntry = 0;
     if (type == FAT12)
@@ -328,7 +335,9 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned partitionOf
             fat_firstSectorOfCluster(boot, _state.currentCluster) * boot->bytesPerSector +      // cluster offset
             sizeof(fat_DirectoryEntry) * clusterEntryIndex;                                     // entry offset
         
-        fetch(address, sizeof(fat_DirectoryEntry), entryBuf);       // reads the data
+        if (!fetch(address, sizeof(fat_DirectoryEntry), entryBuf))   // reads the data
+            return 0;
+
         if (_state.flags & LfnDirectoryEntry)                       // after the long file name
         {   
             ++_state.entryIndex;

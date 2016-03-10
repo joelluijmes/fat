@@ -13,7 +13,7 @@ uint8_t fetch(unsigned address, unsigned count, char* out)
     file.seekg(address);
     file.read(out, count);
 
-    return 0;
+    return file.good();
 }
 
 uint8_t findFile(const string& file, fat_DirectoryEntry* entry)

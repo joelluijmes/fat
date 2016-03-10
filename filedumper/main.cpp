@@ -13,7 +13,7 @@ uint8_t fetch(unsigned address, unsigned count, char* out)
     file.seekg(address);
     file.read(out, count);
 
-    return 0;
+    return file.good();
 }
 
 bool compareCaseInsensitive(const string& a, const string& b)
@@ -74,7 +74,11 @@ void dumpFile(const fat_DirectoryEntry* entry)
             cout << "Address: 0x" << setw(8) << address << endl << endl;
             addressPrinted = 1;
         }
-        fetch(address, clusterSize, buf);
+        if (!fetch(address, clusterSize, buf))
+        {
+            cout << "Error reading data from fetch." << endl;
+            break;
+        }
 
         for (unsigned i = 0; i < clusterSize; ++i, ++x)
         {
