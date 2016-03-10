@@ -56,20 +56,24 @@ void dumpFile(const fat_DirectoryEntry* entry)
     uint32_t fileSize = entry->fileSize;
 
     cout << "Dumping contents of cluster: 0x" << hex << setfill('0') << setw(4) << cluster << endl;
-    cout << "FileSize: 0x" << setw(8) << fileSize << endl << endl;
+    cout << "FileSize: 0x" << setw(8) << fileSize << endl;
 
     if (fileSize == 0)
         return;
 
     uint32_t clusterSize = fat_clusterSize(&boot), currentCluster = cluster, x = 0;
     char* buf = new char[clusterSize];
-    uint8_t eoc;
+    uint8_t eoc, addressPrinted = 0;
 
     do
     {
         uint32_t sector = fat_firstSectorOfCluster(&boot, currentCluster) + fat_firstDataSector(&boot);
-
         uint32_t address = fat_sectorToAddress(&boot, offset, sector);
+        if (!addressPrinted)
+        {
+            cout << "Address: 0x" << setw(8) << address << endl << endl;
+            addressPrinted = 1;
+        }
         fetch(address, clusterSize, buf);
 
         for (unsigned i = 0; i < clusterSize; ++i, ++x)
@@ -91,8 +95,6 @@ void dumpFile(const fat_DirectoryEntry* entry)
 
 int main(int argc, char* argv[])
 {
-    cout << setw(2) << setfill('0') << hex << static_cast<unsigned>(0x8b) << endl;
-
     if (argc < 4)
     {
         cout << "Usage: " << "filedumper [image] [mbr] [filename]" << endl;
