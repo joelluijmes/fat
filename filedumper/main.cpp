@@ -58,6 +58,9 @@ void dumpFile(const fat_DirectoryEntry* entry)
     cout << "Dumping contents of cluster: 0x" << hex << setfill('0') << setw(4) << cluster << endl;
     cout << "FileSize: 0x" << setw(8) << fileSize << endl << endl;
 
+    if (fileSize == 0)
+        return;
+
     uint32_t clusterSize = fat_clusterSize(&boot), currentCluster = cluster, x = 0;
     char* buf = new char[clusterSize];
     uint8_t eoc;
