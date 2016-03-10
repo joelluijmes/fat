@@ -48,7 +48,7 @@ void fat_getFileName(char* fileName, const fat_DirectoryEntry* entry)
     }
 
     if (i > 0)                                              // means there was an extension
-        fileName[8] = '.';
+        fileName[7] = '.';
 }
 
 static void UCS2ToUTF8(char* filename, const fat_LongFileName* lfn)

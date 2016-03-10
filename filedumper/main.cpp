@@ -16,17 +16,38 @@ uint8_t fetch(unsigned address, unsigned count, char* out)
     return 0;
 }
 
+bool compareCaseInsensitive(const string& a, const string& b)
+{
+    unsigned int sz = a.size();
+    if (b.size() != sz)
+        return false;
+    for (unsigned int i = 0; i < sz; ++i)
+        if (tolower(a[i]) != tolower(b[i]))
+            return false;
+    return true;
+}
+
 uint8_t findFile(const string& file, fat_DirectoryEntry* entry)
 {
     char buf[255];
     while (fat_nextDirectoryEntry(&boot, offset, 2, fetch, entry, buf, 255))
     {
-        if (file.compare(buf) == 0)
+        if (compareCaseInsensitive(buf, file))
             return 1;
     }
 
     entry = NULL;
     return 0;
+}
+
+ostream& asHex(std::ostream& os, uint8_t i)
+{
+    char table[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+    char low = table[i & 0x0F];
+    char high = table[i >> 4];
+
+    os << low << high;
+    return os;
 }
 
 void dumpFile(const fat_DirectoryEntry* entry)
@@ -53,7 +74,8 @@ void dumpFile(const fat_DirectoryEntry* entry)
             if (x >= fileSize)
                 break;
 
-            cout << setw(2) << static_cast<int>(buf[i]) << " ";
+            asHex(cout, buf[i]);
+            cout << " ";
         }
 
         currentCluster = fat_nextClusterEntry(&boot, offset, currentCluster, fetch, &eoc);
@@ -66,9 +88,11 @@ void dumpFile(const fat_DirectoryEntry* entry)
 
 int main(int argc, char* argv[])
 {
+    cout << setw(2) << setfill('0') << hex << static_cast<unsigned>(0x8b) << endl;
+
     if (argc < 4)
     {
-        cout << "Usage: " << "fatdumper [image] [mbr] [filename]" << endl;
+        cout << "Usage: " << "filedumper [image] [mbr] [filename]" << endl;
         cout << endl;
         cout << "image: the file to be dumped" << endl;
         cout << "mbr: enter true if there is a mbr present otherwise enter false" << endl;
