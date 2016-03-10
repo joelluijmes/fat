@@ -180,6 +180,9 @@ uint32_t fat_totalFatSize(const fat_BootSector* boot);
 // Calculates the byte address from sector
 uint32_t fat_sectorToAddress(const fat_BootSector* boot, unsigned partitionOffset, uint32_t sector);
 
+// Calculates the first sector address of this cluster
+uint32_t fat_clusterToAddress(const fat_BootSector* boot, unsigned partitionOffset, uint32_t cluster);
+
 // Gets the amount of sectors used by root directory
 uint32_t fat_numberOfRootDirSectors(const fat_BootSector* boot);
 

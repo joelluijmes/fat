@@ -90,6 +90,14 @@ uint32_t fat_sectorToAddress(const fat_BootSector * boot, unsigned partitionOffs
     return boot->bytesPerSector*sector + partitionOffset;
 }
 
+uint32_t fat_clusterToAddress(const fat_BootSector * boot, unsigned partitionOffset, uint32_t cluster)
+{
+
+    uint32_t sector = fat_firstSectorOfCluster(boot, cluster);
+
+    return fat_sectorToAddress(boot, partitionOffset, sector);
+}
+
 uint32_t fat_numberOfRootDirSectors(const fat_BootSector * boot)
 {
     assert(boot != NULL);
@@ -161,8 +169,8 @@ FatType fat_getType(const fat_BootSector * boot)
     return (countOfClusters < 4085)
         ? FAT12
         : (countOfClusters < 65525)
-        ? FAT16
-        : FAT32;
+            ? FAT16
+            : FAT32;
 }
 
 uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, uint8_t* eop)

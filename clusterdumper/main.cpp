@@ -34,7 +34,20 @@ void printChain(unsigned cluster)
     FatType type = fat_getType(&boot);
     unsigned width = ((type == FAT32) ? 7 : ((type == FAT16) ? 4 : 3));
 
-    cout << "Dumping cluster chain, starting: 0x" << hex << setfill('0') << setw(width) << cluster << endl;
+    uint32_t sectorsPerFat = fat_sectorsPerFat(&boot);
+    unsigned fatOffset = (type == FAT12)
+        ? cluster + (cluster / 2)
+        : (type == FAT16)
+            ? cluster * 2
+            : cluster * 4;
+
+    uint32_t thisFatSector = boot.reservedSectors + (fatOffset / boot.bytesPerSector);
+    uint32_t thisFatEntry = fatOffset % boot.bytesPerSector;
+    uint32_t address = fat_sectorToAddress(&boot, offset, thisFatSector);
+
+    cout << hex << setfill('0');
+    cout << "Dumping cluster chain at: 0x" << setw(width) << address << endl;
+    cout << "Base of chain at: 0x" << setw(width) << fat_clusterToAddress(&boot, offset, 2) << endl << endl;
 
     uint8_t eoc;
 
