@@ -293,19 +293,23 @@ uint8_t fat_nextDirectoryEntry(const fat_BootSector * boot, unsigned partitionOf
             (_state.fatType == FAT32)                                               // FAT32 doesn't restrict this (could be as large as needed)
         ; ++_state.entryIndex)                                                      // just follow the chain like any file :)
     {   
-        unsigned clusterEntryIndex = _state.entryIndex % fat_entriesPerCluster(boot);
-        if (_state.entryIndex > 0 && clusterEntryIndex == 0)       // next cluster
+        unsigned clusterEntryIndex = _state.entryIndex;
+        if (_state.fatType == FAT32)
         {
-            if (_state.flags & EndOfChain)
+            clusterEntryIndex %= fat_entriesPerCluster(boot);
+            if (_state.entryIndex > 0 && clusterEntryIndex == 0)       // next cluster
             {
-                _state.flags |= EndOfTable;
-                return 0;
-            }
+                if (_state.flags & EndOfChain)
+                {
+                    _state.flags |= EndOfTable;
+                    return 0;
+                }
 
-            uint8_t eoc;
-            _state.currentCluster = fat_nextClusterEntry(boot, partitionOffset, _state.currentCluster, fetch, &eoc);
-            if (eoc)
-                _state.flags |= EndOfChain;
+                uint8_t eoc;
+                _state.currentCluster = fat_nextClusterEntry(boot, partitionOffset, _state.currentCluster, fetch, &eoc);
+                if (eoc)
+                    _state.flags |= EndOfChain;
+            }
         }
 
         uint32_t address =                                          // calculates the address of where the entry is located
