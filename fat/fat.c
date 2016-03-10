@@ -27,25 +27,28 @@ static EntryState _state;
 
 void fat_getFileName(char* fileName, const fat_DirectoryEntry* entry)
 {
-    uint8_t x = 0;
-    for (uint8_t i = 0; i < 8; ++i)
+    uint8_t x = 0, i;
+    for (i = 0; i < 8; ++i)
     {	              
         if (entry->fileName[i] == ' ')						
             break;
 
-        fileName[x++] = (entry->fileName[i] == 0x05)
+        fileName[x++] = (entry->fileName[i] == 0x05)        // fixes the japanese char thing
             ? tolower(0xE5)
-            : tolower(entry->fileName[i]);
+            : tolower(entry->fileName[i]);                  // just return everything as lower case
     }
 
-    fileName[x++] = '.';
-    for (uint8_t i = 0; i < 3; ++i)
+    ++x;                                                    // skip the dot
+    for (i = 0; i < 3; ++i)
     {
         if (entry->extension[i] == ' ')
             break;
 
-        fileName[x++] = tolower(entry->extension[i]);
+        fileName[x++] = tolower(entry->extension[i]);       // sets extension
     }
+
+    if (i > 0)                                              // means there was an extension
+        fileName[8] = '.';
 }
 
 static void UCS2ToUTF8(char* filename, const fat_LongFileName* lfn)
