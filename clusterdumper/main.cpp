@@ -53,6 +53,10 @@ int main(int argc, char* argv[])
     if (argc < 4)
     {
         cout << "Usage: " << "fatdumper [image] [mbr] [startcluster]" << endl;
+        cout << endl;
+        cout << "image: the file to be dumped" << endl;
+        cout << "mbr: enter true if there is a mbr present otherwise enter false" << endl;
+        cout << "cluster: the starting cluster number" << endl;
         return -1;
     }
 

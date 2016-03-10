@@ -57,6 +57,9 @@ int main(int argc, char* argv[])
     if (argc < 3)
     {
         cout << "Usage: " << "fatdumper [image] [mbr]" << endl;
+        cout << endl;
+        cout << "image: the file to be dumped" << endl;
+        cout << "mbr: enter true if there is a mbr present otherwise enter false" << endl;
         return -1;
     }
 
