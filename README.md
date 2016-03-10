@@ -1,6 +1,6 @@
 # FAT
 
-This repository contains an *ANSI C* fat driver which can be found in the fat directory. There are some other demo projects as well:
+This repository contains an *ANSI C* fat driver which can be found in the fat directory. There are some other demo projects (in C++, it is just dumping random data to the cout) as well:
 
  - **clusterdumper**: Follows a cluster chain and prints it on the screen
  - **fatdumper**: Prints some bootsector info and the root directory
