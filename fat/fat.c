@@ -211,7 +211,7 @@ uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, ui
     {
         fat_PartitionEntry entry;                                           // read partition entry
         if (!fetchData(offsetof(fat_MBR, partitionTable), sizeof(fat_PartitionEntry), (char*)&entry))
-            return;
+            return -1;
 
         if ((entry.type | FAT_SUPPORTED_TYPES) == 0)						// check if it is supported
             continue;
