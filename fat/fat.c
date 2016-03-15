@@ -25,6 +25,28 @@ struct EntryState
 };
 static EntryState _state;
 
+void fat_getDate(uint16_t date, uint8_t* day, uint8_t* month, uint16_t* year)
+{
+    assert(day != NULL);
+    assert(month != NULL);
+    assert(year != NULL);
+
+    *day = date & 0x1F;
+    *month = ((date >> 5) & 0x0F);
+    *year = ((date >> 9) & 0x7F) + 1980;
+}
+
+void fat_getTime(uint16_t time, uint8_t* seconds, uint8_t* minute, uint8_t* hour)
+{
+    assert(seconds != NULL);
+    assert(minute != NULL);
+    assert(hour != NULL);
+
+    *seconds = ((time & 0x1F) * 2);
+    *minute = ((time >> 5) & 0x3F);
+    *hour = ((time >> 11) & 0x1F);
+}
+
 void fat_getFileName(char* fileName, const fat_DirectoryEntry* entry)
 {
     uint8_t x = 0, i;

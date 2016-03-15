@@ -50,14 +50,41 @@ ostream& asHex(std::ostream& os, uint8_t i)
     return os;
 }
 
+string getTime(uint16_t fatTime)
+{
+    uint8_t second, minute, hour;
+
+    fat_getTime(fatTime, &second, &minute, &hour);
+    ostringstream stream;
+    stream << setfill('0') << setw(2) << static_cast<int>(hour) << ":" << setw(2) << static_cast<int>(minute) << ":" << setw(2) << static_cast<int>(second);
+
+    return stream.str();
+}
+
+string getDate(uint16_t fatDate)
+{
+    uint8_t day, month;
+    uint16_t year;
+
+    fat_getDate(fatDate, &day, &month, &year);
+    stringstream stream;
+    stream << setfill('0') << setw(2) << static_cast<int>(day) << "-" << setw(2) << static_cast<int>(month) << "-" << static_cast<int>(year);
+
+    return string(stream.str());
+}
+
 void dumpFile(const fat_DirectoryEntry* entry)
 {
     uint32_t cluster = entry->clusterHigh << 16 | entry->clusterLow;
     uint32_t fileSize = entry->fileSize;
 
+    string time = getTime(entry->time);
+
     cout << "Dumping contents of cluster: 0x" << hex << setfill('0') << setw(4) << cluster << endl;
     cout << "FileSize: 0x" << setw(8) << fileSize << endl;
-
+    cout << "Created: " << getDate(entry->dateCreated) << endl;
+    cout << "Accessed: " << getDate(entry->dateAccessed) << " " << time << endl;
+    
     if (fileSize == 0)
         return;
 
@@ -79,7 +106,7 @@ void dumpFile(const fat_DirectoryEntry* entry)
             cout << "Error reading data from fetch." << endl;
             break;
         }
-
+        
         for (unsigned i = 0; i < clusterSize; ++i, ++x)
         {
             if (x >= fileSize)

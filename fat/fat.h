@@ -168,6 +168,12 @@ enum FatType
 // Fetches data from the device (i.e. file or hardware driver)
 typedef uint8_t(*fetchData_t)(unsigned address, unsigned count, char* out);
 
+// Gets date from fat date format
+void fat_getDate(uint16_t date, uint8_t* day, uint8_t* month, uint16_t* year);
+
+// Gets time from fat time format
+void fat_getTime(uint16_t time, uint8_t* seconds, uint8_t* minute, uint8_t* hour);
+
 // Gets filename out of a short directory entry, fileName length must be >= 12 
 void fat_getFileName(char* fileName, const fat_DirectoryEntry* entry);
 
