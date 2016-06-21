@@ -436,3 +436,14 @@ uint8_t fat_compareFilename(const fat_DirectoryEntry* entry, const char* input)
 
     return 1;														// completed the checks :)
 }
+
+uint8_t fat_checksum(uint8_t* name)
+{
+    uint8_t sum = 0;
+
+    for (uint16_t i = 11; i != 0; i--) {
+        // NOTE: The operation is an unsigned char rotate right
+        sum = (sum & 1 ? 0x80 : 0) + (sum >> 1) + *name++;
+    }
+    return (sum);
+}

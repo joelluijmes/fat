@@ -226,3 +226,5 @@ uint32_t fat_nextPartitionSector(fetchData_t fetchData, fat_BootSector* boot, ui
 // Compares input with the directory entry (short file name)
 uint8_t fat_compareFilename(const fat_DirectoryEntry* entry, const char* input);
 
+// Calculates checksum of long file name
+uint8_t fat_checksum(uint8_t* name);
